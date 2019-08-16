@@ -1,0 +1,155 @@
+#
+# IMPORTANT: If you have a home network (LAN) and want to allow for file- and printersharing
+#            do the following:
+#
+#            1. Activate (by removing the leading #-signs) the rules that have MY_LAN in it.
+#
+#            2. Replace all instances of MY_LAN with your appropriate IP address mask.
+#               If your LAN's address space is 192.168.0.0 - 192.168.0.255 you should
+#               replace MY_LAN with 192.168.0.0/24
+#
+#
+
+#---------------------------------------------------------------------------------------------------
+#--- First of all, flush all existing rules
+#---------------------------------------------------------------------------------------------------
+-f flush
+
+#---------------------------------------------------------------------------------------------------
+#---
+#---
+#--- B A S I C   R U L E S 
+#---
+#---
+#---------------------------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------------------------------
+#--- Rules for localhost
+#---------------------------------------------------------------------------------------------------
+# Allow any loopback adapter traffic
+add allow all from any to any via lo*
+
+# Prevent any traffic from/to 127.0.0.1 (common in localhost spoofing attacks)
+add deny all from any to 127.0.0.0/8 in
+add deny all from 127.0.0.0/8 to any in
+
+#---------------------------------------------------------------------------------------------------
+#--- DHCP - stateless
+#---
+#--- Allow us to get an IP address whereever we are. If you have a static private address you can 
+#--- deactivate these.
+#---------------------------------------------------------------------------------------------------
+add allow UDP from any 68 to any 67 out
+add allow UDP from any 67 to any 68 in
+
+#---------------------------------------------------------------------------------------------------
+#--- Allow solicited traffic according to dynamic rules
+#---------------------------------------------------------------------------------------------------
+# Check if packet is already allowed according to dynamically created rules
+add check-state
+
+# Deny TCP packets in an established connection state that failed the dynamic rules
+add deny TCP from any to any established
+
+# Deny any fragmented packets
+add deny all from any to any frag
+
+#---------------------------------------------------------------------------------------------------
+#---
+#---
+#--- L A N  A N D   F I L E S H A R I N G   R U L E S 
+#---
+#---
+#---------------------------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------------------------------
+#--- Allow ICMP in/out for LAN - stateless
+#---
+#--- We don't want to put any restrictions towards other computers on our local network with regards
+#--- to ICMP traffic. In other words, we are creating a full trust.
+#--- Normally this should'nt be a problem, but if you don't want that, keep these rules inactive.
+#---------------------------------------------------------------------------------------------------
+#add allow ICMP from MY_LAN to MY_LAN out
+#add allow ICMP from MY_LAN to MY_LAN in
+
+#---------------------------------------------------------------------------------------------------
+#--- Allow NetBIOS, file- and printersharing in/out for LAN (local network)
+#---
+#--- We will not put any restrictions towards other computers on our LAN with regards
+#--- to NetBIOS, file- and printersharing. In other words, we are creating a full trust!
+#--- If you don't want that, keep these rules inactive, or create your own rules that allow
+#--- file- and printersharing for example only for specific IP addresses.
+#---------------------------------------------------------------------------------------------------
+#add allow TCP from MY_LAN 1024-65535 to MY_LAN 135 out setup keep-state
+#add allow TCP from MY_LAN 1024-65535 to MY_LAN 135 in setup keep-state
+#add allow UDP from MY_LAN 137,138 to MY_LAN 137,138 out
+#add allow UDP from MY_LAN 137,138 to MY_LAN 137,138 in
+#add allow TCP from MY_LAN 1024-65535 to MY_LAN 139 out setup keep-state
+#add allow TCP from MY_LAN 1024-65535 to MY_LAN 139 in setup keep-state
+#add allow TCP from MY_LAN 1024-65535 to MY_LAN 445 out setup keep-state
+#add allow TCP from MY_LAN 1024-65535 to MY_LAN 445 in setup keep-state
+
+#---------------------------------------------------------------------------------------------------
+#--- Deny outbound NetBIOS, file- and printersharing for WAN (internet)
+#---
+#--- If directly connected to the internet, we will not bother other machines with
+#--- NetBIOS / file-sharing connection attempts that may show up at their end as attacks
+#--- (which, of course it is'nt).
+#---------------------------------------------------------------------------------------------------
+#add deny TCP from me to not MY_LAN 135,137,138,139,445
+#add deny UDP from me to not MY_LAN 135,137,138,139,445
+
+
+#---------------------------------------------------------------------------------------------------
+#---
+#---
+#--- S P E C I A L   R U L E S
+#---
+#---
+#---------------------------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------------------------------
+#--- Special rule for FTP
+#--- 
+#--- If you need to do some outbound FTP that does'nt work, try activating this rule.
+#---------------------------------------------------------------------------------------------------
+#add allow tcp from any 20 to me 1024-65535 setup keep-state
+
+
+#---------------------------------------------------------------------------------------------------
+#---
+#---
+#--- O U T G O I N G   R U L E S 
+#---
+#---
+#---------------------------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------------------------------
+#--- Allow all other outbound connections - stateful
+#---------------------------------------------------------------------------------------------------
+add allow TCP from me to any out setup keep-state
+add allow UDP from me to any out keep-state
+add allow ICMP from me to any out keep-state
+
+#---------------------------------------------------------------------------------------------------
+#---
+#---
+#--- I N C O M I N G   R U L E S (only for nescessary services)
+#---
+#---
+#---------------------------------------------------------------------------------------------------
+# EXAMPLE:  You want to run a VNC server on this machine.
+#           However, you only want other machines on your network (not any from the internet) to be
+#           able to connect to it.
+#           Let's assume your VNC server is set to listen on port 5800.
+#
+#add allow TCP from MY_LAN to me 5800 in setup keep-state
+
+#---------------------------------------------------------------------------------------------------
+#---
+#---
+#--- D E N Y   A N D   L O G   O T H E R   T R A F F I C
+#---
+#---
+#---------------------------------------------------------------------------------------------------
+add deny log all from any to any
